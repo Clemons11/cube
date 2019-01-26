@@ -78,34 +78,17 @@ void setup() {
 //MAIN LOOP
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop() {
-    SetFace(0, 0x07, 0x00, 0xFF, 0x00); //green
-  delay(100);
-  SetFace(1, 0x07, 0, 255, 255); //yellow
-  delay(100);
-  SetFace(2, 0x07, 0x00, 0x00, 0xFF); //red
-  delay(100);
-  SetFace(3, 0x07, 0xFF, 0x00, 0x00); //blue
-  delay(100);
-  SetFace(4, 0x07, 0, 69, 255); //orange
-  delay(100);
-  SetFace(5, 0x07, 0xFF, 0xFF, 0xFF); //white
-  delay(100);
+  for(int i=0;i<255;i++){
+  SetFace(0, 0x07, 0, 0, i); //green
+  SetFace(1, 0x07, 0,i, 0); //yellow
+  SetFace(2, 0x07, 0, i, i); //red
+  SetFace(3, 0x07, i, 0, 0); //blue
+  SetFace(4, 0x07, i, 0, i); //orange
+  SetFace(5, 0x07, i, i, 0); //white
+  
   SendData();
-  delay(2000);
-  SetFace(0, 0x00, 0x00, 0xFF, 0x00); //green
-  delay(100);
-  SetFace(1, 0x00, 0, 255, 255); //yellow
-  delay(100);
-  SetFace(2, 0x00, 0x00, 0x00, 0xFF); //red
-  delay(100);
-  SetFace(3, 0x00, 0xFF, 0x00, 0x00); //blue
-  delay(100);
-  SetFace(4, 0x00, 0, 69, 255); //orange
-  delay(100);
-  SetFace(5, 0x00, 0xFF, 0xFF, 0xFF); //white
-  delay(100);
-  SendData();
-  delay(2000);
+  delay(50);
+  }
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //TURN OFF ALL LEDS FUNCTION
