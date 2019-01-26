@@ -1,6 +1,7 @@
 
 
 #include <SPI.h>
+#include <EEPROM.h>
 const long start_frame = 0x00;
 const long end_frame = 0xFF;
 const byte total_leds = 54;
@@ -36,11 +37,12 @@ const byte brightness_select = 0x04;
 
 
 //Plane numbers... 0:Upper 1:Down/Lower 2:Left 3:Right 4:Front 5:Back 6:Right Vertical 7:Front Vertical 8:Front Horizontal
-const byte planes[9][12] = {{6,7,8,24,25,26,33,34,35,42,43,44}, {0, 1, 2, 18, 19, 20, 27, 28, 29, 36, 37, 38},
-  {9,14,15,18,23,24,45,50,51,44,39,38}, {11,12,17,20,21,26,47,48,53,42,41,36},
+const byte planes[9][12] = {{6, 7, 8, 24, 25, 26, 33, 34, 35, 42, 43, 44}, {0, 1, 2, 18, 19, 20, 27, 28, 29, 36, 37, 38},
+  {9, 14, 15, 18, 23, 24, 45, 50, 51, 44, 39, 38}, {11, 12, 17, 20, 21, 26, 47, 48, 53, 42, 41, 36},
   {2, 3, 8, 45, 46, 47, 33, 32, 27, 17, 16, 15}, {0, 6, 5, 51, 52, 53, 35, 30, 29, 11, 10, 9},
-  {1,4,7,50,49,48,34,31,28,12,13,14}, {10,13,16,19,22,25,46,49,52,43,40,37},
-  {5,4,3,23,22,21,32,31,30,41,40,39}};
+  {1, 4, 7, 50, 49, 48, 34, 31, 28, 12, 13, 14}, {10, 13, 16, 19, 22, 25, 46, 49, 52, 43, 40, 37},
+  {5, 4, 3, 23, 22, 21, 32, 31, 30, 41, 40, 39}
+};
 
 const byte faces[6][8] = {{51, 52, 53, 48, 47, 46, 45, 50}, {15, 16, 17, 12, 11, 10, 9, 14}, {6, 7, 8, 3, 2, 1, 0, 5},
   {33, 34, 35, 30, 29, 28, 27, 32}, {24, 25, 26, 21, 20, 19, 18, 23}, {36, 41, 42, 43, 44, 39, 38, 37}
@@ -63,15 +65,16 @@ void setup() {
   SPI.beginTransaction(SPISettings(8000000, MSBFIRST, SPI_MODE0)); //TODO check max frequency
   SPI.begin();
   Serial.begin(9600);
-  SolvedCube();
-  delay(2000);
+  AutoLoad();
+  delay(1000);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //MAIN LOOP
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop() {
 
-  Test();
+  
+  
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //TURN OFF ALL LEDS FUNCTION, w/o clearing array
@@ -81,7 +84,7 @@ void ClearCube() {
   for (i = 0; i < 4; i++)
   {
     SPI.transfer(start_frame);
-  
+
   }
   delayMicroseconds(1);
   for (i = 0; i < NUM_LEDS; i++)
@@ -108,7 +111,7 @@ void ClearCube() {
 void ClearCube2() {
   for (i = 0; i < 54; i++)
   {
-   SetLed(i, 0xE0, 0, 0, 0);
+    SetLed(i, 0xE0, 0, 0, 0);
   }
   SendData();
 }
@@ -171,7 +174,7 @@ void SetFace(int face_num, byte brightness, byte blue, byte green, byte red) {
 //SET A WHOLE PLANE ON THE CUBE TO A SPECIFIC COLOR AND BRIGHTNESS
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void SetPlane(int plane_num, byte brightness, byte blue, byte green, byte red) {
-byte z;
+  byte z;
   //Set all the LEDs on one face the same color, brightness, etc.
   for (z = 0; z < 12; z++) {
     led_frame[planes[plane_num][z]][0] = brightness | 0b11100000;
@@ -199,13 +202,13 @@ void SwipeReact(byte plane_num, byte swipe_direction) {
 
   //Buffer the plane LED data
   //Copy the LED data in the specific plane into this buffer array
-   for ( a = 0; a < 12; a++) {
+  for ( a = 0; a < 12; a++) {
     led_plane_buffer[a][0] = led_frame[planes[plane_num][a]][0];
     led_plane_buffer[a][1] = led_frame[planes[plane_num][a]][1];
     led_plane_buffer[a][2] = led_frame[planes[plane_num][a]][2];
     led_plane_buffer[a][3] = led_frame[planes[plane_num][a]][3];
-   }
-//Update the LEDs on the perimeter of the plane being rotated
+  }
+  //Update the LEDs on the perimeter of the plane being rotated
   for ( a = 0; a < 12; a++) {
     if (swipe_direction == 1) {
       b = a - 3;
@@ -217,13 +220,13 @@ void SwipeReact(byte plane_num, byte swipe_direction) {
       b = 12 + b;
     }
     else if (b > 11) {
-      b = b-12;
+      b = b - 12;
     }
     led_frame[planes[plane_num][a]][0] = led_plane_buffer[b][0];
     Serial.print("led_frame[");
-    Serial.print(planes[plane_num][a],DEC);
+    Serial.print(planes[plane_num][a], DEC);
     Serial.print("][0] <= led_plane_buffer[");
-    Serial.print(b,DEC);
+    Serial.print(b, DEC);
     Serial.print("][0]");
     Serial.println();
     led_frame[planes[plane_num][a]][1] = led_plane_buffer[b][1];
@@ -231,15 +234,15 @@ void SwipeReact(byte plane_num, byte swipe_direction) {
     led_frame[planes[plane_num][a]][3] = led_plane_buffer[b][3];
 
   }
-//
+  //
   //Buffer the plane LED data
   //Copy the LED data in the specific plane into this buffer array
-   for ( a = 0; a < 8; a++) {
+  for ( a = 0; a < 8; a++) {
     led_face_buffer[a][0] = led_frame[faces[plane_num][a]][0];
     led_face_buffer[a][1] = led_frame[faces[plane_num][a]][1];
     led_face_buffer[a][2] = led_frame[faces[plane_num][a]][2];
     led_face_buffer[a][3] = led_frame[faces[plane_num][a]][3];
-   }
+  }
 
   //Update the LEDs on the face of the plane being rotated
   if (plane_num < 6) {
@@ -266,7 +269,7 @@ void SwipeReact(byte plane_num, byte swipe_direction) {
   }
   SendData();
 }
-void SolvedCube(){
+void SolvedCube() {
   SetFace(0, brightness_select, 0x00, 0xFF, 0x00); //green
   SetFace(1, brightness_select, 0, 255, 255); //yellow
   SetFace(2, brightness_select, 0x00, 0x00, 0xFF); //red
@@ -274,134 +277,114 @@ void SolvedCube(){
   SetFace(4, brightness_select, 0, 69, 255); //orange
   SetFace(5, brightness_select, 0xFF, 0xFF, 0xFF); //white
   SendData();
-  
+
 }
 //Plane numbers... 0:Upper 1:Down/Lower 2:Left 3:Right 4:Front 5:Back 6:Right Vertical 7:Front Vertical 8:Front Horizontal
 //direction 0:CW 1:CCW
-void Test(){
+void Test() {
 
-      SwipeReact(0,1);
-      delay(2000);
-      SwipeReact(0,1);
-      delay(2000);
-      SwipeReact(0,1);
-      delay(2000);
-      SwipeReact(0,1);
-      delay(2000);
+  SwipeReact(0, 1);
+  delay(2000);
+  SwipeReact(0, 1);
+  delay(2000);
+  SwipeReact(0, 1);
+  delay(2000);
+  SwipeReact(0, 1);
+  delay(2000);
 
-      SwipeReact(8,1);
-      delay(2000);
-      SwipeReact(8,1);
-      delay(2000);
-      SwipeReact(8,1);
-      delay(2000);
-      SwipeReact(8,1);
-      delay(2000);
+  SwipeReact(1, 1);
+  delay(2000);
+  SwipeReact(1, 1);
+  delay(2000);
+  SwipeReact(1, 1);
+  delay(2000);
+  SwipeReact(1, 1);
+  delay(2000);
 
-      SwipeReact(1,1);
-      delay(2000);
-      SwipeReact(1,1);
-      delay(2000);
-      SwipeReact(1,1);
-      delay(2000);
-      SwipeReact(1,1);
-      delay(2000);
+  AutoSave();
 
-      SwipeReact(4,1);
-      delay(2000);
-      SwipeReact(4,1);
-      delay(2000);
-      SwipeReact(4,1);
-      delay(2000);
-      SwipeReact(4,1);
-      delay(2000);
 
-      SwipeReact(6,1);
-      delay(2000);
-      SwipeReact(6,1);
-      delay(2000);
-      SwipeReact(6,1);
-      delay(2000);
-      SwipeReact(6,1);
-      delay(2000);
+  delay(100000);
 
-      SwipeReact(5,1);
-      delay(2000);
-      SwipeReact(5,1);
-      delay(2000);
-      SwipeReact(5,1);
-      delay(2000);
-      SwipeReact(5,1);
-      delay(2000);
-
-      SwipeReact(2,1);
-      delay(2000);
-      SwipeReact(2,1);
-      delay(2000);
-      SwipeReact(2,1);
-      delay(2000);
-      SwipeReact(2,1);
-      delay(2000);
-
-      SwipeReact(3,1);
-      delay(2000);
-      SwipeReact(3,1);
-      delay(2000);
-      SwipeReact(3,1);
-      delay(2000);
-      SwipeReact(3,1);
-      delay(2000);
-      
 
 }
-void SlowlyLight(){
+void SlowlyLight() {
 
-      for(int c = 0; c <54; c++){
+  for (int c = 0; c < 54; c++) {
 
-        SetLed(c, brightness_select, 255,0,0);
-        SendData();
-        delay(500);
-      }
+    SetLed(c, brightness_select, 255, 0, 0);
+    SendData();
+    delay(500);
+  }
 
-  
+
 }
-void CheckPlanes(){
-     SetPlane(0, brightness_select, 255, 0, 0);
-   delay(2000);
-   ClearCube2();
-   delay(2000);
-   SetPlane(1, brightness_select, 255, 0, 0);
-   delay(2000);
-   ClearCube2();
-   delay(2000);
-   SetPlane(2, brightness_select, 255, 0, 0);
-   delay(2000);
-   ClearCube2();
-   delay(2000);
-   SetPlane(3, brightness_select, 255, 0, 0);
-   delay(2000);
-   ClearCube2();
-   delay(2000);
-   SetPlane(4, brightness_select, 255, 0, 0);
-   delay(2000);
-   ClearCube2();
-   delay(2000);
-   SetPlane(5, brightness_select, 255, 0, 0);
-   delay(2000);
-   ClearCube2();
-   delay(2000);
-   SetPlane(6, brightness_select, 255, 0, 0);
-   delay(2000);
-   ClearCube2();
-   delay(2000);
-   SetPlane(7, brightness_select, 255, 0, 0);
-   delay(2000);
-   ClearCube2();
-   delay(2000);
-   SetPlane(8, brightness_select, 255, 0, 0);
-   delay(2000);
-   ClearCube2();
-   delay(2000);
+void CheckPlanes() {
+  SetPlane(0, brightness_select, 255, 0, 0);
+  delay(2000);
+  ClearCube2();
+  delay(2000);
+  SetPlane(1, brightness_select, 255, 0, 0);
+  delay(2000);
+  ClearCube2();
+  delay(2000);
+  SetPlane(2, brightness_select, 255, 0, 0);
+  delay(2000);
+  ClearCube2();
+  delay(2000);
+  SetPlane(3, brightness_select, 255, 0, 0);
+  delay(2000);
+  ClearCube2();
+  delay(2000);
+  SetPlane(4, brightness_select, 255, 0, 0);
+  delay(2000);
+  ClearCube2();
+  delay(2000);
+  SetPlane(5, brightness_select, 255, 0, 0);
+  delay(2000);
+  ClearCube2();
+  delay(2000);
+  SetPlane(6, brightness_select, 255, 0, 0);
+  delay(2000);
+  ClearCube2();
+  delay(2000);
+  SetPlane(7, brightness_select, 255, 0, 0);
+  delay(2000);
+  ClearCube2();
+  delay(2000);
+  SetPlane(8, brightness_select, 255, 0, 0);
+  delay(2000);
+  ClearCube2();
+  delay(2000);
 
-  
+
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Autosave the state of the cube before it dies, or once the user turns it off and before complete shutdown.
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void AutoSave() {
+
+  for (int i = 0; i < (54 * 4 - 1); i++)
+  {
+    for (int j = 0; j < 4; j++)
+    {
+      EEPROM.write((i * 4 + j), led_frame[i][j]);
+      delay(10);
+    }
+  }
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Autoload the state of the cube from the last saved data in EEPROM
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void AutoLoad() {
+
+  for (int i = 0; i < (54 * 4 - 1); i++)
+  {
+    for (int j = 0; j < 4; j++)
+    {
+      led_frame[i][j] = EEPROM.read((i * 4 + j));
+      delay(10);//TODO see what delay is needed
+    }
+  }
+  SendData();
 }
