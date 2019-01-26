@@ -6,6 +6,8 @@ const long end_frame = 0xFF;
 const byte total_leds = 54;
 const byte num_of_faces = 6;
 
+const byte brightness_select = 0x04;
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //LED PLANE CONSTANTS
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -26,21 +28,22 @@ const byte num_of_faces = 6;
 //const byte F_face[8]  = {24, 25, 26, 21, 20, 19, 18, 23};
 
 //const byte B_plane[12]  = {6, 5, 0, 9, 10, 11, 29, 30, 35, 53, 52, 51}; //back
-//const byte B_face[8]  = {36, 37, 38, 39, 44, 43, 42, 41};
+//const byte B_face[8]  = {36, 41, 42, 43, 44, 39, 38, 37};
 
-//const byte RM_plane[12] = {50, 49, 48, 34, 31, 28, 12, 13, 14, 1, 4, 7}; //Turning the face that is 1 back from the front, clockwise
-//const byte FM_plane[12] = {19, 22, 25, 46, 49, 52, 43, 40, 37, 10, 13, 16}; //Plane 1 from right
+//const byte RV_plane[12] = {50, 49, 48, 34, 31, 28, 12, 13, 14, 1, 4, 7}; //Turning the face that is 1 back from the front, clockwise
+//const byte FV_plane[12] = {19, 22, 25, 46, 49, 52, 43, 40, 37, 10, 13, 16}; //Plane 1 from right
+//const byte FH_plane[12] = {5,4,3,23,22,21,32,31,30,41,40,44}; //Turning the face that is 1 from the top, clockwise
 
 
-
-const byte planes[8][12] = {{8, 7, 6, 44, 43, 42, 35, 34, 33, 26, 25, 24}, {0, 1, 2, 18, 19, 20, 27, 28, 29, 36, 37, 38},
-  {24, 23, 18, 15, 14, 9, 38, 39, 44, 51, 50, 45}, {20, 21, 26, 47, 48, 53, 42, 41, 36, 11, 12, 17},
-  {2, 3, 8, 45, 46, 47, 33, 32, 27, 17, 16, 15}, {6, 5, 0, 9, 10, 11, 29, 30, 35, 53, 52, 51},
-  {50, 49, 48, 34, 31, 28, 12, 13, 14, 1, 4, 7}, {19, 22, 25, 46, 49, 52, 43, 40, 37, 10, 13, 16}
-};
+//Plane numbers... 0:Upper 1:Down/Lower 2:Left 3:Right 4:Front 5:Back 6:Right Vertical 7:Front Vertical 8:Front Horizontal
+const byte planes[9][12] = {{6,7,8,24,25,26,33,34,35,42,43,44}, {0, 1, 2, 18, 19, 20, 27, 28, 29, 36, 37, 38},
+  {9,14,15,18,23,24,45,50,51,44,39,38}, {11,12,17,20,21,26,47,48,53,42,41,36},
+  {2, 3, 8, 45, 46, 47, 33, 32, 27, 17, 16, 15}, {0, 6, 5, 51, 52, 53, 35, 30, 29, 11, 10, 9},
+  {1,4,7,50,49,48,34,31,28,12,13,14}, {10,13,16,19,22,25,46,49,52,43,40,37},
+  {5,4,3,23,22,21,32,31,30,41,40,39}};
 
 const byte faces[6][8] = {{51, 52, 53, 48, 47, 46, 45, 50}, {15, 16, 17, 12, 11, 10, 9, 14}, {6, 7, 8, 3, 2, 1, 0, 5},
-  {33, 34, 35, 30, 29, 28, 27, 32}, {24, 25, 26, 21, 20, 19, 18, 23}, {36, 37, 38, 39, 44, 43, 42, 41}
+  {33, 34, 35, 30, 29, 28, 27, 32}, {24, 25, 26, 21, 20, 19, 18, 23}, {36, 41, 42, 43, 44, 39, 38, 37}
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,50 +62,31 @@ const int NUM_LEDS = 54;
 void setup() {
   SPI.beginTransaction(SPISettings(8000000, MSBFIRST, SPI_MODE0)); //TODO check max frequency
   SPI.begin();
-  //Initialize cube
-  SetFace(0, 0x07, 0x00, 0xFF, 0x00); //green
-  delay(100);
-  SetFace(1, 0x07, 0, 255, 255); //yellow
-  delay(100);
-  SetFace(2, 0x07, 0x00, 0x00, 0xFF); //red
-  delay(100);
-  SetFace(3, 0x07, 0xFF, 0x00, 0x00); //blue
-  delay(100);
-  SetFace(4, 0x07, 0, 69, 255); //orange
-  delay(100);
-  SetFace(5, 0x07, 0xFF, 0xFF, 0xFF); //white
-  delay(100);
-  SendData();
+  Serial.begin(9600);
+  SolvedCube();
+  delay(2000);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //MAIN LOOP
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop() {
-  for(int i=0;i<255;i++){
-  SetFace(0, 0x07, 0, 0, i); //green
-  SetFace(1, 0x07, 0,i, 0); //yellow
-  SetFace(2, 0x07, 0, i, i); //red
-  SetFace(3, 0x07, i, 0, 0); //blue
-  SetFace(4, 0x07, i, 0, i); //orange
-  SetFace(5, 0x07, i, i, 0); //white
-  
-  SendData();
-  delay(50);
-  }
+
+  Test();
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//TURN OFF ALL LEDS FUNCTION
+//TURN OFF ALL LEDS FUNCTION, w/o clearing array
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Right now this just sends data to turn off all the leds, but does not replace data in the array of LED values
 void ClearCube() {
   for (i = 0; i < 4; i++)
   {
     SPI.transfer(start_frame);
-
+  
   }
   delayMicroseconds(1);
   for (i = 0; i < NUM_LEDS; i++)
   {
-    SPI.transfer(0xE7);
+    SPI.transfer(0xE0);
     delayMicroseconds(1);
     SPI.transfer(0x00);
     delayMicroseconds(1);
@@ -116,6 +100,17 @@ void ClearCube() {
     SPI.transfer(end_frame);
   }
   delayMicroseconds(1);
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//TURN OFF ALL LEDS FUNCTION, w/ clearing array
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//This updates the array to be 0 then sends the data.
+void ClearCube2() {
+  for (i = 0; i < 54; i++)
+  {
+   SetLed(i, 0xE0, 0, 0, 0);
+  }
+  SendData();
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //SEND THE DATA IN THE ARRAY TO THE LEDS
@@ -173,6 +168,20 @@ void SetFace(int face_num, byte brightness, byte blue, byte green, byte red) {
   }
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//SET A WHOLE PLANE ON THE CUBE TO A SPECIFIC COLOR AND BRIGHTNESS
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void SetPlane(int plane_num, byte brightness, byte blue, byte green, byte red) {
+byte z;
+  //Set all the LEDs on one face the same color, brightness, etc.
+  for (z = 0; z < 12; z++) {
+    led_frame[planes[plane_num][z]][0] = brightness | 0b11100000;
+    led_frame[planes[plane_num][z]][1] = blue;
+    led_frame[planes[plane_num][z]][2] = green;
+    led_frame[planes[plane_num][z]][3] = red;
+  }
+  SendData();
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Determine IF A SWIPE OCCURRED OR IF A BUTTON WAS JUST PRESSED, determine plane swiped and direction.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void SwipeDetect() {
@@ -180,12 +189,24 @@ void SwipeDetect() {
 
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//Move the colors to the correct positions
+//Move the colors to the correct positions...Swipe direction 0:CW 1: CCW
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void SwipeReact(byte plane_num, byte swipe_direction) {
-  byte b;
+  byte led_plane_buffer[12][4];
+  byte led_face_buffer[8][4];
+  short a;
+  short b;
+
+  //Buffer the plane LED data
+  //Copy the LED data in the specific plane into this buffer array
+   for ( a = 0; a < 12; a++) {
+    led_plane_buffer[a][0] = led_frame[planes[plane_num][a]][0];
+    led_plane_buffer[a][1] = led_frame[planes[plane_num][a]][1];
+    led_plane_buffer[a][2] = led_frame[planes[plane_num][a]][2];
+    led_plane_buffer[a][3] = led_frame[planes[plane_num][a]][3];
+   }
 //Update the LEDs on the perimeter of the plane being rotated
-  for (byte a = 0; a < 12; a++) {
+  for ( a = 0; a < 12; a++) {
     if (swipe_direction == 1) {
       b = a - 3;
     }
@@ -196,21 +217,34 @@ void SwipeReact(byte plane_num, byte swipe_direction) {
       b = 12 + b;
     }
     else if (b > 11) {
-      b = 12 - b;
+      b = b-12;
     }
-    led_frame[planes[plane_num][a]][0] = led_frame[planes[plane_num][b]][0];
-    led_frame[planes[plane_num][a]][1] = led_frame[planes[plane_num][b]][1];
-    led_frame[planes[plane_num][a]][2] = led_frame[planes[plane_num][b]][2];
-    led_frame[planes[plane_num][a]][3] = led_frame[planes[plane_num][b]][3];
-
-
+    led_frame[planes[plane_num][a]][0] = led_plane_buffer[b][0];
+    Serial.print("led_frame[");
+    Serial.print(planes[plane_num][a],DEC);
+    Serial.print("][0] <= led_plane_buffer[");
+    Serial.print(b,DEC);
+    Serial.print("][0]");
+    Serial.println();
+    led_frame[planes[plane_num][a]][1] = led_plane_buffer[b][1];
+    led_frame[planes[plane_num][a]][2] = led_plane_buffer[b][2];
+    led_frame[planes[plane_num][a]][3] = led_plane_buffer[b][3];
 
   }
+//
+  //Buffer the plane LED data
+  //Copy the LED data in the specific plane into this buffer array
+   for ( a = 0; a < 8; a++) {
+    led_face_buffer[a][0] = led_frame[faces[plane_num][a]][0];
+    led_face_buffer[a][1] = led_frame[faces[plane_num][a]][1];
+    led_face_buffer[a][2] = led_frame[faces[plane_num][a]][2];
+    led_face_buffer[a][3] = led_frame[faces[plane_num][a]][3];
+   }
 
   //Update the LEDs on the face of the plane being rotated
   if (plane_num < 6) {
 
-    for (byte a = 0; a < 8; a++) {
+    for ( a = 0; a < 8; a++) {
       if (swipe_direction == 1) {
         b = a - 2;
       }
@@ -221,14 +255,153 @@ void SwipeReact(byte plane_num, byte swipe_direction) {
         b = 8 + b;
       }
       else if (b > 7) {
-        b = 8 - b;
+        b = b - 8;
       }
-      led_frame[planes[plane_num][a]][0] = led_frame[planes[plane_num][b]][0];
-      led_frame[planes[plane_num][a]][1] = led_frame[planes[plane_num][b]][1];
-      led_frame[planes[plane_num][a]][2] = led_frame[planes[plane_num][b]][2];
-      led_frame[planes[plane_num][a]][3] = led_frame[planes[plane_num][b]][3];
-
+      led_frame[faces[plane_num][a]][0] = led_face_buffer[b][0];
+      led_frame[faces[plane_num][a]][1] = led_face_buffer[b][1];
+      led_frame[faces[plane_num][a]][2] = led_face_buffer[b][2];
+      led_frame[faces[plane_num][a]][3] = led_face_buffer[b][3];
     }
 
   }
+  SendData();
+}
+void SolvedCube(){
+  SetFace(0, brightness_select, 0x00, 0xFF, 0x00); //green
+  SetFace(1, brightness_select, 0, 255, 255); //yellow
+  SetFace(2, brightness_select, 0x00, 0x00, 0xFF); //red
+  SetFace(3, brightness_select, 0xFF, 0x00, 0x00); //blue
+  SetFace(4, brightness_select, 0, 69, 255); //orange
+  SetFace(5, brightness_select, 0xFF, 0xFF, 0xFF); //white
+  SendData();
+  
+}
+//Plane numbers... 0:Upper 1:Down/Lower 2:Left 3:Right 4:Front 5:Back 6:Right Vertical 7:Front Vertical 8:Front Horizontal
+//direction 0:CW 1:CCW
+void Test(){
+
+      SwipeReact(0,1);
+      delay(2000);
+      SwipeReact(0,1);
+      delay(2000);
+      SwipeReact(0,1);
+      delay(2000);
+      SwipeReact(0,1);
+      delay(2000);
+
+      SwipeReact(8,1);
+      delay(2000);
+      SwipeReact(8,1);
+      delay(2000);
+      SwipeReact(8,1);
+      delay(2000);
+      SwipeReact(8,1);
+      delay(2000);
+
+      SwipeReact(1,1);
+      delay(2000);
+      SwipeReact(1,1);
+      delay(2000);
+      SwipeReact(1,1);
+      delay(2000);
+      SwipeReact(1,1);
+      delay(2000);
+
+      SwipeReact(4,1);
+      delay(2000);
+      SwipeReact(4,1);
+      delay(2000);
+      SwipeReact(4,1);
+      delay(2000);
+      SwipeReact(4,1);
+      delay(2000);
+
+      SwipeReact(6,1);
+      delay(2000);
+      SwipeReact(6,1);
+      delay(2000);
+      SwipeReact(6,1);
+      delay(2000);
+      SwipeReact(6,1);
+      delay(2000);
+
+      SwipeReact(5,1);
+      delay(2000);
+      SwipeReact(5,1);
+      delay(2000);
+      SwipeReact(5,1);
+      delay(2000);
+      SwipeReact(5,1);
+      delay(2000);
+
+      SwipeReact(2,1);
+      delay(2000);
+      SwipeReact(2,1);
+      delay(2000);
+      SwipeReact(2,1);
+      delay(2000);
+      SwipeReact(2,1);
+      delay(2000);
+
+      SwipeReact(3,1);
+      delay(2000);
+      SwipeReact(3,1);
+      delay(2000);
+      SwipeReact(3,1);
+      delay(2000);
+      SwipeReact(3,1);
+      delay(2000);
+      
+
+}
+void SlowlyLight(){
+
+      for(int c = 0; c <54; c++){
+
+        SetLed(c, brightness_select, 255,0,0);
+        SendData();
+        delay(500);
+      }
+
+  
+}
+void CheckPlanes(){
+     SetPlane(0, brightness_select, 255, 0, 0);
+   delay(2000);
+   ClearCube2();
+   delay(2000);
+   SetPlane(1, brightness_select, 255, 0, 0);
+   delay(2000);
+   ClearCube2();
+   delay(2000);
+   SetPlane(2, brightness_select, 255, 0, 0);
+   delay(2000);
+   ClearCube2();
+   delay(2000);
+   SetPlane(3, brightness_select, 255, 0, 0);
+   delay(2000);
+   ClearCube2();
+   delay(2000);
+   SetPlane(4, brightness_select, 255, 0, 0);
+   delay(2000);
+   ClearCube2();
+   delay(2000);
+   SetPlane(5, brightness_select, 255, 0, 0);
+   delay(2000);
+   ClearCube2();
+   delay(2000);
+   SetPlane(6, brightness_select, 255, 0, 0);
+   delay(2000);
+   ClearCube2();
+   delay(2000);
+   SetPlane(7, brightness_select, 255, 0, 0);
+   delay(2000);
+   ClearCube2();
+   delay(2000);
+   SetPlane(8, brightness_select, 255, 0, 0);
+   delay(2000);
+   ClearCube2();
+   delay(2000);
+
+  
 }
