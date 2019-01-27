@@ -2,6 +2,8 @@
 
 #include <SPI.h>
 #include <EEPROM.h>
+#include <avr/sleep.h>
+
 const long start_frame = 0x00;
 const long end_frame = 0xFF;
 const byte total_leds = 54;
@@ -52,7 +54,7 @@ const byte faces[6][8] = {{51, 52, 53, 48, 47, 46, 45, 50}, {15, 16, 17, 12, 11,
 
 int i = 0;
 
-//Arrayy
+//Arrayy where all the LED data is stored.
 byte led_frame[total_leds][4];
 
 const int NUM_LEDS = 54;
@@ -67,6 +69,7 @@ void setup() {
   Serial.begin(9600);
   AutoLoad();
   delay(1000);
+  //attachInterrupt(0,WakeUp,CHANGE);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //MAIN LOOP
@@ -387,4 +390,39 @@ void AutoLoad() {
     }
   }
   SendData();
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Function to enter sleep mode, execute this if the user has turned off the cube or has not used it in a while
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void GoToSleep() {
+
+  //Use the lowest power consumtion mode..
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN); 
+
+  //Asserts the sleep bit in the mcucr register
+  sleep_enable();
+
+  //Attach interrupt to pin 2, int 0. When the pin changes it will run the WakeUp function.
+  attachInterrupt(0,WakeUp,CHANGE);
+
+  //The device enters sleep mode, stays here until woken up.
+  sleep_mode();
+  
+  //Disable sleep mode
+  sleep_disable();
+
+  //Dettach the interrupt
+  detachInterrupt(0);
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Function to wake up mcu
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void WakeUp() {
+//Put anything here that you might want the device to do right after waking up.
+
+//Enable load switches
+
+//Load previously stored data (might already jump to setup after?? TODO
+//AutoLoad();
+ 
 }
