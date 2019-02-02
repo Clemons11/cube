@@ -1,5 +1,7 @@
-
-
+//USPI is a library I created to run the USART Port in SPI Master mode, so now we can use 2 SPI ports
+//This was usefull since the APA102 LEDs don't have a CS line, so I couldn't use the same bus for 
+//other devices
+#include <USPI.h>
 #include <SPI.h>
 #include <EEPROM.h>
 #include <avr/sleep.h>
@@ -10,6 +12,14 @@ const byte total_leds = 54;
 const byte num_of_faces = 6;
 
 const byte brightness_select = 0x04;
+
+
+//PINS:
+//USART_SPI : 0:MISO 1:MOSI 4:SCLK
+//SPI       : 11:MOSI 13:SCLK
+
+
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //LED PLANE CONSTANTS
@@ -59,15 +69,17 @@ byte led_frame[total_leds][4];
 
 const int NUM_LEDS = 54;
 
-
+//USPI uspi();
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //INITIALIZATION
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void setup() {
   SPI.beginTransaction(SPISettings(8000000, MSBFIRST, SPI_MODE0)); //TODO check max frequency
   SPI.begin();
-  Serial.begin(9600);
-  AutoLoad();
+  //Init Spi to use 4MHz
+  USPI_start(4);
+  //Serial.begin(9600);
+  //AutoLoad();
   delay(1000);
   //attachInterrupt(0,WakeUp,CHANGE);
 }
@@ -76,7 +88,16 @@ void setup() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop() {
 
-  
+  SetFace(0,1,255,0,0);
+  SetFace(1,1,255,0,0);
+  SetFace(2,1,0,255,0);
+  SetFace(3,1,0,255,0);
+  SetFace(4,1,0,0,255);
+  SetFace(5,1,0,0,255);
+  SendData();
+  delay(2000);
+  ClearCube2();
+  delay(2000);
   
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -142,6 +163,34 @@ void SendData() {
   for ( i = 0; i < 4; i++)
   {
     SPI.transfer(end_frame);
+  }
+  delayMicroseconds(1);
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//SEND DATA THRU THE USART PORT IN SPI MASTER MODE
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void SendDataUSPI()
+{
+   for (i = 0; i < 4; i++)
+  {
+    USPI_transmit(start_frame);
+  }
+  delayMicroseconds(1);
+  for (i = 0; i < NUM_LEDS; i++)
+  {
+    USPI_transmit(led_frame[i][0]);
+    delayMicroseconds(1);
+    USPI_transmit(led_frame[i][1]);
+    delayMicroseconds(1);
+    USPI_transmit(led_frame[i][2]);
+    delayMicroseconds(1);
+    USPI_transmit(led_frame[i][3]);
+    delayMicroseconds(1);
+  }
+
+  for ( i = 0; i < 4; i++)
+  {
+    USPI_transmit(end_frame);
   }
   delayMicroseconds(1);
 }
@@ -226,12 +275,12 @@ void SwipeReact(byte plane_num, byte swipe_direction) {
       b = b - 12;
     }
     led_frame[planes[plane_num][a]][0] = led_plane_buffer[b][0];
-    Serial.print("led_frame[");
-    Serial.print(planes[plane_num][a], DEC);
-    Serial.print("][0] <= led_plane_buffer[");
-    Serial.print(b, DEC);
-    Serial.print("][0]");
-    Serial.println();
+//    Serial.print("led_frame[");
+//    Serial.print(planes[plane_num][a], DEC);
+//    Serial.print("][0] <= led_plane_buffer[");
+//    Serial.print(b, DEC);
+//    Serial.print("][0]");
+//    Serial.println();
     led_frame[planes[plane_num][a]][1] = led_plane_buffer[b][1];
     led_frame[planes[plane_num][a]][2] = led_plane_buffer[b][2];
     led_frame[planes[plane_num][a]][3] = led_plane_buffer[b][3];
